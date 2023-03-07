@@ -19,13 +19,9 @@ func parseLines(lines [][]string) []problem.Problem {
 
 func main() {
 
-	csvFileName := flag.String("csv", "problem.csv", "Opens the given csv file for question and answers")
-	flag.Parse()
+	csvFileName, timeLimit := parseFlags()
 
-	timeLimit := flag.Int("timelimit", 10, "timelimit for the quiz")
-
-	csvFile, err := os.Open(*csvFileName)
-
+	csvFile, err := os.Open(csvFileName)
 	if err != nil {
 		exit(fmt.Sprintf("Failed to open the file %v", *csvFile))
 	}
@@ -33,18 +29,17 @@ func main() {
 	csvReader := csv.NewReader(csvFile)
 
 	lines, err := csvReader.ReadAll()
-
 	if err != nil {
 		exit("Error parsing csv file")
 	}
 
-	timer := time.NewTimer(time.Duration(*timeLimit) * time.Second)
+	timer := time.NewTimer(time.Duration(timeLimit) * time.Second)
 	answerChan := make(chan string)
 	problems := parseLines(lines)
 	counter := 0
 
 	for i, p := range problems {
-		fmt.Printf("Problem %v, %v = ", i+1, p.Question)
+		p.Print(i)
 		go waitForAnswer(answerChan)
 		select {
 		case <-timer.C:
@@ -57,6 +52,13 @@ func main() {
 		}
 	}
 	fmt.Printf("Total score %v out of %v questions \n", counter, len(problems))
+}
+
+func parseFlags() (string, int) {
+	csvFileName := flag.String("csv", "problem.csv", "Opens the given csv file for question and answers")
+	timeLimit := flag.Int("timelimit", 10, "timelimit for the quiz")
+	flag.Parse()
+	return *csvFileName, *timeLimit
 }
 
 func waitForAnswer(ch chan string) {
